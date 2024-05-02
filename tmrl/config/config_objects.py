@@ -12,7 +12,7 @@ from tmrl.custom.custom_gym_interfaces import TM2020Interface, TM2020InterfaceLi
 from tmrl.custom.custom_memories import MemoryTMFull, MemoryTMLidar, MemoryTMLidarProgress, get_local_buffer_sample_lidar, get_local_buffer_sample_lidar_progress, get_local_buffer_sample_tm20_imgs
 from tmrl.custom.custom_preprocessors import obs_preprocessor_tm_act_in_obs, obs_preprocessor_tm_lidar_act_in_obs,obs_preprocessor_tm_lidar_progress_act_in_obs
 from tmrl.envs import GenericGymEnv
-from tmrl.custom.custom_models import SquashedGaussianMLPActor, MLPActorCritic, REDQMLPActorCritic, SquashedGaussianVanillaCNNActor, VanillaCNNActorCritic, SquashedGaussianVanillaColorCNNActor, VanillaColorCNNActorCritic
+from tmrl.custom.custom_models import EffNetActorCritic,SquashedGaussianEffNetActor,SquashedGaussianMLPActor, MLPActorCritic, REDQMLPActorCritic, RNNActorCritic, SquashedGaussianRNNActor, SquashedGaussianVanillaCNNActor, VanillaCNNActorCritic, SquashedGaussianVanillaColorCNNActor, VanillaColorCNNActorCritic
 from tmrl.custom.custom_algorithms import SpinupSacAgent as SAC_Agent
 from tmrl.custom.custom_algorithms import REDQSACAgent as REDQ_Agent
 from tmrl.custom.custom_checkpoints import update_run_instance
@@ -28,7 +28,6 @@ assert ALG_NAME in ["SAC", "REDQSAC"], f"If you wish to implement {ALG_NAME}, do
 
 if cfg.PRAGMA_LIDAR:
     if cfg.PRAGMA_RNN:
-        print("RNN")
         assert ALG_NAME == "SAC", f"{ALG_NAME} is not implemented here."
         TRAIN_MODEL = RNNActorCritic
         POLICY = SquashedGaussianRNNActor
@@ -38,8 +37,8 @@ if cfg.PRAGMA_LIDAR:
 else:
     assert not cfg.PRAGMA_RNN, "RNNs not supported yet"
     assert ALG_NAME == "SAC", f"{ALG_NAME} is not implemented here."
-    TRAIN_MODEL = VanillaCNNActorCritic if cfg.GRAYSCALE else VanillaColorCNNActorCritic
-    POLICY = SquashedGaussianVanillaCNNActor if cfg.GRAYSCALE else SquashedGaussianVanillaColorCNNActor
+    TRAIN_MODEL = EffNetActorCritic if cfg.GRAYSCALE else VanillaColorCNNActorCritic
+    POLICY = SquashedGaussianEffNetActor if cfg.GRAYSCALE else SquashedGaussianVanillaColorCNNActor
 
 if cfg.PRAGMA_LIDAR:
     if cfg.PRAGMA_PROGRESS:
@@ -190,3 +189,4 @@ else:  # images
 DUMP_RUN_INSTANCE_FN = None if cfg.PRAGMA_LIDAR else None  # dump_run_instance_images_dataset
 LOAD_RUN_INSTANCE_FN = None if cfg.PRAGMA_LIDAR else None  # load_run_instance_images_dataset
 UPDATER_FN = update_run_instance if ALG_NAME in ["SAC", "REDQSAC"] else None
+print(POLICY,TRAIN_MODEL)

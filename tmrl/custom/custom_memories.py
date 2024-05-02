@@ -56,7 +56,7 @@ def get_local_buffer_sample_tm20_imgs(prev_act, obs, rew, terminated, truncated,
     CAUTION: prev_act is the action that comes BEFORE obs (i.e. prev_obs, prev_act(prev_obs), obs(prev_act))
     """
     prev_act_mod = prev_act
-    obs_mod = (obs[0], obs[1], obs[2], (obs[3][-1] * 256.0).astype(np.uint8))
+    obs_mod = (obs[0], obs[1], obs[2], (obs[3][-1] * 256.0).astype(np.uint8),obs[4][-1])
     rew_mod = rew
     terminated_mod = terminated
     truncated_mod = truncated
@@ -487,6 +487,11 @@ class MemoryTMFull(MemoryTM):
         imgs_last_obs = imgs[:-1]
         imgs_new_obs = imgs[1:]
 
+        lidars = self.load_lidars(item)
+        # print("LIDARS",lidars.shape)
+        lidars_last_obs = lidars[:-1]
+        lidars_new_obs = lidars[1:]
+
         # if a reset transition has influenced the observation, special care must be taken
         last_eoes = self.data[4][idx_now - self.min_samples:idx_now]  # self.min_samples values
         last_eoe_idx = last_true_in_list(last_eoes)  # last occurrence of True
@@ -498,11 +503,14 @@ class MemoryTMFull(MemoryTM):
             replace_hist_before_eoe(hist=last_act_buf, eoe_idx_in_hist=last_eoe_idx - self.start_acts_offset)
             replace_hist_before_eoe(hist=imgs_new_obs, eoe_idx_in_hist=last_eoe_idx - self.start_imgs_offset - 1)
             replace_hist_before_eoe(hist=imgs_last_obs, eoe_idx_in_hist=last_eoe_idx - self.start_imgs_offset)
+            replace_hist_before_eoe(hist=lidars_last_obs, eoe_idx_in_hist=last_eoe_idx - self.start_imgs_offset)
+            replace_hist_before_eoe(hist=lidars_new_obs, eoe_idx_in_hist=last_eoe_idx - self.start_imgs_offset - 1)
 
-        last_obs = (self.data[2][idx_last], self.data[7][idx_last], self.data[8][idx_last], imgs_last_obs, *last_act_buf)
+
+        last_obs = (self.data[2][idx_last], self.data[7][idx_last], self.data[8][idx_last], imgs_last_obs,lidars_last_obs, *last_act_buf)
         new_act = self.data[1][idx_now]
         rew = np.float32(self.data[5][idx_now])
-        new_obs = (self.data[2][idx_now], self.data[7][idx_now], self.data[8][idx_now], imgs_new_obs, *new_act_buf)
+        new_obs = (self.data[2][idx_now], self.data[7][idx_now], self.data[8][idx_now], imgs_new_obs,lidars_new_obs, *new_act_buf)
         terminated = self.data[9][idx_now]
         truncated = self.data[10][idx_now]
         info = self.data[6][idx_now]
@@ -511,6 +519,10 @@ class MemoryTMFull(MemoryTM):
     def load_imgs(self, item):
         res = self.data[3][(item + self.start_imgs_offset):(item + self.start_imgs_offset + self.imgs_obs + 1)]
         return np.stack(res).astype(np.float32) / 256.0
+
+    def load_lidars(self, item):
+        res = self.data[11][(item + self.start_imgs_offset):(item + self.start_imgs_offset + self.imgs_obs + 1)]
+        return np.stack(res)
 
     def load_acts(self, item):
         res = self.data[1][(item + self.start_acts_offset):(item + self.start_acts_offset + self.act_buf_len + 1)]
@@ -535,6 +547,8 @@ class MemoryTMFull(MemoryTM):
         d8 = [b[1][2] for b in buffer.memory]  # rpms
         d9 = [b[3] for b in buffer.memory]  # terminated
         d10 = [b[4] for b in buffer.memory]  # truncated
+        d11 = [b[1][4] for b in buffer.memory]  # lidar
+
 
         if self.__len__() > 0:
             self.data[0] += d0
@@ -548,6 +562,8 @@ class MemoryTMFull(MemoryTM):
             self.data[8] += d8
             self.data[9] += d9
             self.data[10] += d10
+            self.data[11] += d11
+
         else:
             self.data.append(d0)
             self.data.append(d1)
@@ -560,6 +576,8 @@ class MemoryTMFull(MemoryTM):
             self.data.append(d8)
             self.data.append(d9)
             self.data.append(d10)
+            self.data.append(d11)
+
 
         to_trim = self.__len__() - self.memory_size
         if to_trim > 0:
@@ -574,5 +592,7 @@ class MemoryTMFull(MemoryTM):
             self.data[8] = self.data[8][to_trim:]
             self.data[9] = self.data[9][to_trim:]
             self.data[10] = self.data[10][to_trim:]
+            self.data[11] = self.data[11][to_trim:]
+
 
         return self

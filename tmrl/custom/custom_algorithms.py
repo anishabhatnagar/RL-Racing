@@ -26,7 +26,7 @@ class SpinupSacAgent(TrainingAgent):  # Adapted from Spinup
     observation_space: type
     action_space: type
     device: str = None  # device where the model will live (None for auto)
-    model_cls: type = core.MLPActorCritic
+    model_cls: type = core.EffNetActorCritic
     gamma: float = 0.99
     polyak: float = 0.995
     alpha: float = 0.2  # fixed (v1) or initial (v2) value of the entropy coefficient
