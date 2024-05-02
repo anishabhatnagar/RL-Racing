@@ -48,6 +48,16 @@ LOG_STD_MAX = 2
 LOG_STD_MIN = -20
 EPSILON = 1e-7
 
+def rnn(input_size, rnn_size, rnn_len):
+    """
+    sizes is ignored for now, expect first values and length
+    """
+    num_rnn_layers = rnn_len
+    assert num_rnn_layers >= 1
+    hidden_size = rnn_size
+
+    gru = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_rnn_layers, bias=True, batch_first=True, dropout=0, bidirectional=False)
+    return gru
 
 class SquashedGaussianMLPActor(TorchActorModule):
     def __init__(self, observation_space, action_space, hidden_sizes=(256, 256), activation=nn.ReLU):
@@ -60,13 +70,19 @@ class SquashedGaussianMLPActor(TorchActorModule):
             self.tuple_obs = False
         dim_act = action_space.shape[0]
         act_limit = action_space.high[0]
-        self.net = mlp([dim_obs] + list(hidden_sizes), activation, activation)
+        self.net = mlp([dim_obs+324] + list(hidden_sizes), activation, activation)
         self.mu_layer = nn.Linear(hidden_sizes[-1], dim_act)
         self.log_std_layer = nn.Linear(hidden_sizes[-1], dim_act)
         self.act_limit = act_limit
+        self.rnn = rnn(19,100,2)
 
     def forward(self, obs, test=False, with_logprob=True):
-        x = torch.cat(obs, -1) if self.tuple_obs else torch.flatten(obs, start_dim=1)
+        a,aprog,lidar,b,c = obs
+        lidar_reshaped = lidar.view(-1,4,19)
+        rnn_out,_ = self.rnn(lidar_reshaped)
+        rnn_out_flat = torch.flatten(rnn_out,1)
+        x = torch.cat((a,aprog,rnn_out_flat,b,c), -1) if self.tuple_obs else torch.flatten(obs, start_dim=1)
+        
         net_out = self.net(x)
         mu = self.mu_layer(net_out)
         log_std = self.log_std_layer(net_out)
@@ -118,10 +134,16 @@ class MLPQFunction(nn.Module):
             obs_dim = prod(obs_space.shape)
             self.tuple_obs = False
         act_dim = act_space.shape[0]
-        self.q = mlp([obs_dim + act_dim] + list(hidden_sizes) + [1], activation)
+        self.q = mlp([obs_dim + act_dim+324] + list(hidden_sizes) + [1], activation)
+        self.rnn = rnn(19,100,2)
 
     def forward(self, obs, act):
-        x = torch.cat((*obs, act), -1) if self.tuple_obs else torch.cat((torch.flatten(obs, start_dim=1), act), -1)
+        a,aprog,lidar,b,c = obs
+        lidar_reshaped = lidar.view(-1,4,19)
+        rnn_out,_ = self.rnn(lidar_reshaped)
+        rnn_out_flat = torch.flatten(rnn_out,1)
+
+        x = torch.cat((a,aprog,rnn_out_flat,b,c, act), -1) if self.tuple_obs else torch.cat((torch.flatten(obs, start_dim=1), act), -1)
         q = self.q(x)
         return torch.squeeze(q, -1)  # Critical to ensure q has right shape.  # FIXME: understand this
 
@@ -668,159 +690,159 @@ class VanillaColorCNNActorCritic(VanillaCNNActorCritic):
 # RNN: ==========================================================
 
 
-def rnn(input_size, rnn_size, rnn_len):
-    """
-    sizes is ignored for now, expect first values and length
-    """
-    num_rnn_layers = rnn_len
-    assert num_rnn_layers >= 1
-    hidden_size = rnn_size
+# def rnn(input_size, rnn_size, rnn_len):
+#     """
+#     sizes is ignored for now, expect first values and length
+#     """
+#     num_rnn_layers = rnn_len
+#     assert num_rnn_layers >= 1
+#     hidden_size = rnn_size
 
-    gru = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_rnn_layers, bias=True, batch_first=True, dropout=0, bidirectional=False)
-    return gru
-
-
-class SquashedGaussianRNNActor(nn.Module):
-    def __init__(self, obs_space, act_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
-        super().__init__()
-        dim_obs = sum(prod(s for s in space.shape) for space in obs_space)
-        dim_act = act_space.shape[0]
-        act_limit = act_space.high[0]
-        self.rnn = rnn(dim_obs, rnn_size, rnn_len)
-        self.mlp = mlp([rnn_size] + list(mlp_sizes), activation, activation)
-        self.mu_layer = nn.Linear(mlp_sizes[-1], dim_act)
-        self.log_std_layer = nn.Linear(mlp_sizes[-1], dim_act)
-        self.act_limit = act_limit
-        self.h = None
-        self.rnn_size = rnn_size
-        self.rnn_len = rnn_len
-
-    def forward(self, obs_seq, test=False, with_logprob=True, save_hidden=False):
-        """
-        obs: observation
-        h: hidden state
-        Returns:
-            pi_action, log_pi, h
-        """
-        self.rnn.flatten_parameters()
-
-        # sequence_len = obs_seq[0].shape[0]
-        batch_size = obs_seq[0].shape[0]
-
-        if not save_hidden or self.h is None:
-            device = obs_seq[0].device
-            h = torch.zeros((self.rnn_len, batch_size, self.rnn_size), device=device)
-        else:
-            h = self.h
-
-        obs_seq_cat = torch.cat(obs_seq, -1)
-        net_out, h = self.rnn(obs_seq_cat, h)
-        net_out = net_out[:, -1]
-        net_out = self.mlp(net_out)
-        mu = self.mu_layer(net_out)
-        log_std = self.log_std_layer(net_out)
-        log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
-        std = torch.exp(log_std)
-
-        # Pre-squash distribution and sample
-        pi_distribution = Normal(mu, std)
-        if test:
-            # Only used for evaluating policy at test time.
-            pi_action = mu
-        else:
-            pi_action = pi_distribution.rsample()
-
-        if with_logprob:
-            # Compute logprob from Gaussian, and then apply correction for Tanh squashing.
-            # NOTE: The correction formula is a little bit magic. To get an understanding
-            # of where it comes from, check out the original SAC paper (arXiv 1801.01290)
-            # and look in appendix C. This is a more numerically-stable equivalent to Eq 21.
-            # Try deriving it yourself as a (very difficult) exercise. :)
-            logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
-            logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=1)
-        else:
-            logp_pi = None
-
-        pi_action = torch.tanh(pi_action)
-        pi_action = self.act_limit * pi_action
-
-        pi_action = pi_action.squeeze()
-
-        if save_hidden:
-            self.h = h
-
-        return pi_action, logp_pi
-
-    def act(self, obs, test=False):
-        obs_seq = tuple(o.view(1, *o.shape) for o in obs)  # artificially add sequence dimension
-        with torch.no_grad():
-            a, _ = self.forward(obs_seq=obs_seq, test=test, with_logprob=False, save_hidden=True)
-            return a.squeeze().cpu().numpy()
+#     gru = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_rnn_layers, bias=True, batch_first=True, dropout=0, bidirectional=False)
+#     return gru
 
 
-class RNNQFunction(nn.Module):
-    """
-    The action is merged in the latent space after the RNN
-    """
-    def __init__(self, obs_space, act_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
-        super().__init__()
-        dim_obs = sum(prod(s for s in space.shape) for space in obs_space)
-        dim_act = act_space.shape[0]
-        self.rnn = rnn(dim_obs, rnn_size, rnn_len)
-        self.mlp = mlp([rnn_size + dim_act] + list(mlp_sizes) + [1], activation)
-        self.h = None
-        self.rnn_size = rnn_size
-        self.rnn_len = rnn_len
+# class SquashedGaussianRNNActor(nn.Module):
+#     def __init__(self, obs_space, act_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
+#         super().__init__()
+#         dim_obs = sum(prod(s for s in space.shape) for space in obs_space)
+#         dim_act = act_space.shape[0]
+#         act_limit = act_space.high[0]
+#         self.rnn = rnn(dim_obs, rnn_size, rnn_len)
+#         self.mlp = mlp([rnn_size] + list(mlp_sizes), activation, activation)
+#         self.mu_layer = nn.Linear(mlp_sizes[-1], dim_act)
+#         self.log_std_layer = nn.Linear(mlp_sizes[-1], dim_act)
+#         self.act_limit = act_limit
+#         self.h = None
+#         self.rnn_size = rnn_size
+#         self.rnn_len = rnn_len
 
-    def forward(self, obs_seq, act, save_hidden=False):
-        """
-        obs: observation
-        h: hidden state
-        Returns:
-            pi_action, log_pi, h
-        """
-        self.rnn.flatten_parameters()
+#     def forward(self, obs_seq, test=False, with_logprob=True, save_hidden=False):
+#         """
+#         obs: observation
+#         h: hidden state
+#         Returns:
+#             pi_action, log_pi, h
+#         """
+#         self.rnn.flatten_parameters()
 
-        # sequence_len = obs_seq[0].shape[0]
-        batch_size = obs_seq[0].shape[0]
+#         # sequence_len = obs_seq[0].shape[0]
+#         batch_size = obs_seq[0].shape[0]
 
-        if not save_hidden or self.h is None:
-            device = obs_seq[0].device
-            h = torch.zeros((self.rnn_len, batch_size, self.rnn_size), device=device)
-        else:
-            h = self.h
+#         if not save_hidden or self.h is None:
+#             device = obs_seq[0].device
+#             h = torch.zeros((self.rnn_len, batch_size, self.rnn_size), device=device)
+#         else:
+#             h = self.h
 
-        # logging.debug(f"len(obs_seq):{len(obs_seq)}")
-        # logging.debug(f"obs_seq[0].shape:{obs_seq[0].shape}")
-        # logging.debug(f"obs_seq[1].shape:{obs_seq[1].shape}")
-        # logging.debug(f"obs_seq[2].shape:{obs_seq[2].shape}")
-        # logging.debug(f"obs_seq[3].shape:{obs_seq[3].shape}")
+#         obs_seq_cat = torch.cat(obs_seq, -1)
+#         net_out, h = self.rnn(obs_seq_cat, h)
+#         net_out = net_out[:, -1]
+#         net_out = self.mlp(net_out)
+#         mu = self.mu_layer(net_out)
+#         log_std = self.log_std_layer(net_out)
+#         log_std = torch.clamp(log_std, LOG_STD_MIN, LOG_STD_MAX)
+#         std = torch.exp(log_std)
 
-        obs_seq_cat = torch.cat(obs_seq, -1)
+#         # Pre-squash distribution and sample
+#         pi_distribution = Normal(mu, std)
+#         if test:
+#             # Only used for evaluating policy at test time.
+#             pi_action = mu
+#         else:
+#             pi_action = pi_distribution.rsample()
 
-        # logging.debug(f"obs_seq_cat.shape:{obs_seq_cat.shape}")
+#         if with_logprob:
+#             # Compute logprob from Gaussian, and then apply correction for Tanh squashing.
+#             # NOTE: The correction formula is a little bit magic. To get an understanding
+#             # of where it comes from, check out the original SAC paper (arXiv 1801.01290)
+#             # and look in appendix C. This is a more numerically-stable equivalent to Eq 21.
+#             # Try deriving it yourself as a (very difficult) exercise. :)
+#             logp_pi = pi_distribution.log_prob(pi_action).sum(axis=-1)
+#             logp_pi -= (2 * (np.log(2) - pi_action - F.softplus(-2 * pi_action))).sum(axis=1)
+#         else:
+#             logp_pi = None
 
-        net_out, h = self.rnn(obs_seq_cat, h)
-        # logging.debug(f"1 net_out.shape:{net_out.shape}")
-        net_out = net_out[:, -1]
-        # logging.debug(f"2 net_out.shape:{net_out.shape}")
-        net_out = torch.cat((net_out, act), -1)
-        # logging.debug(f"3 net_out.shape:{net_out.shape}")
-        q = self.mlp(net_out)
+#         pi_action = torch.tanh(pi_action)
+#         pi_action = self.act_limit * pi_action
 
-        if save_hidden:
-            self.h = h
+#         pi_action = pi_action.squeeze()
 
-        return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
+#         if save_hidden:
+#             self.h = h
+
+#         return pi_action, logp_pi
+
+#     def act(self, obs, test=False):
+#         obs_seq = tuple(o.view(1, *o.shape) for o in obs)  # artificially add sequence dimension
+#         with torch.no_grad():
+#             a, _ = self.forward(obs_seq=obs_seq, test=test, with_logprob=False, save_hidden=True)
+#             return a.squeeze().cpu().numpy()
 
 
-class RNNActorCritic(nn.Module):
-    def __init__(self, observation_space, action_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
-        super().__init__()
+# class RNNQFunction(nn.Module):
+#     """
+#     The action is merged in the latent space after the RNN
+#     """
+#     def __init__(self, obs_space, act_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
+#         super().__init__()
+#         dim_obs = sum(prod(s for s in space.shape) for space in obs_space)
+#         dim_act = act_space.shape[0]
+#         self.rnn = rnn(dim_obs, rnn_size, rnn_len)
+#         self.mlp = mlp([rnn_size + dim_act] + list(mlp_sizes) + [1], activation)
+#         self.h = None
+#         self.rnn_size = rnn_size
+#         self.rnn_len = rnn_len
 
-        act_limit = action_space.high[0]
+#     def forward(self, obs_seq, act, save_hidden=False):
+#         """
+#         obs: observation
+#         h: hidden state
+#         Returns:
+#             pi_action, log_pi, h
+#         """
+#         self.rnn.flatten_parameters()
 
-        # build policy and value functions
-        self.actor = SquashedGaussianRNNActor(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
-        self.q1 = RNNQFunction(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
-        self.q2 = RNNQFunction(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
+#         # sequence_len = obs_seq[0].shape[0]
+#         batch_size = obs_seq[0].shape[0]
+
+#         if not save_hidden or self.h is None:
+#             device = obs_seq[0].device
+#             h = torch.zeros((self.rnn_len, batch_size, self.rnn_size), device=device)
+#         else:
+#             h = self.h
+
+#         # logging.debug(f"len(obs_seq):{len(obs_seq)}")
+#         # logging.debug(f"obs_seq[0].shape:{obs_seq[0].shape}")
+#         # logging.debug(f"obs_seq[1].shape:{obs_seq[1].shape}")
+#         # logging.debug(f"obs_seq[2].shape:{obs_seq[2].shape}")
+#         # logging.debug(f"obs_seq[3].shape:{obs_seq[3].shape}")
+
+#         obs_seq_cat = torch.cat(obs_seq, -1)
+
+#         # logging.debug(f"obs_seq_cat.shape:{obs_seq_cat.shape}")
+
+#         net_out, h = self.rnn(obs_seq_cat, h)
+#         # logging.debug(f"1 net_out.shape:{net_out.shape}")
+#         net_out = net_out[:, -1]
+#         # logging.debug(f"2 net_out.shape:{net_out.shape}")
+#         net_out = torch.cat((net_out, act), -1)
+#         # logging.debug(f"3 net_out.shape:{net_out.shape}")
+#         q = self.mlp(net_out)
+
+#         if save_hidden:
+#             self.h = h
+
+#         return torch.squeeze(q, -1)  # Critical to ensure q has right shape.
+
+
+# class RNNActorCritic(nn.Module):
+#     def __init__(self, observation_space, action_space, rnn_size=100, rnn_len=2, mlp_sizes=(100, 100), activation=nn.ReLU):
+#         super().__init__()
+
+#         act_limit = action_space.high[0]
+
+#         # build policy and value functions
+#         self.actor = SquashedGaussianRNNActor(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
+#         self.q1 = RNNQFunction(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
+#         self.q2 = RNNQFunction(observation_space, action_space, rnn_size, rnn_len, mlp_sizes, activation)
