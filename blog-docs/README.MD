@@ -2,8 +2,8 @@
 
 By Anisha Bhatnagar and Ashwin Udaykumar
 
-1. **Introduction**
--    1. **Overview of Trackmania**
+## **Introduction**
+### 1. **Overview of Trackmania**
 
 Trackmania is a renowned racing game that offers a blend of high-speed driving and intricate track design. The application of Reinforcement Learning (RL) to Trackmania allows for the exploration of AI-driven optimization in a complex, interactive environment. Using the TMRL framework, developers can implement deep reinforcement learning strategies to train agents that navigate the game’s challenging tracks. This framework supports real-time learning, which is critical for adapting to the dynamic conditions of Trackmania’s gameplay.
 
@@ -41,7 +41,7 @@ This enhanced LIDAR environment includes additional track completion data, enhan
 
 Inspired by behaviorism, the environment provides a reward at each time-step as a measure of performance. Instead of merely rewarding speed, the reward function assesses how effectively the car covers the track. A demonstration trajectory is recorded and divided into points, with rewards given based on the number of points passed since the last time-step. This measures the car’s effectiveness in covering significant portions of the track efficiently.
 
--    2. **Soft Actor-Critic (SAC) Algorithm Overview**
+### 2. **Soft Actor-Critic (SAC) Algorithm Overview**
 
 The Soft Actor-Critic (SAC) algorithm is highly effective for environments requiring continuous action decisions, such as the dynamic and complex world of F-1 racing games like Trackmania. As a model-free, off-policy algorithm, SAC optimizes a policy that balances the dual objectives of maximizing expected return and entropy. This entropy augmentation promotes exploration by valuing uncertain states, which helps prevent premature convergence on suboptimal strategies.
 
@@ -51,7 +51,7 @@ The Soft Actor-Critic (SAC) algorithm is highly effective for environments requi
 - **Stability and Efficiency:** SAC features soft policy updates, which improve stability and reduce sensitivity to hyperparameter settings, making it suitable for real-time applications where decisions must be rapid and reliable.
 - **Optimal for Continuous Action Spaces**: Trackmania's continuous control demands, such as steering angles and throttle management, are well-suited for SAC because it can directly derive optimal actions from continuous sets.
 
-2. **Experiment 1: EfficientNet_v2 in Hybrid Environment**
+## **Experiment 1: EfficientNet_v2 in Hybrid Environment**
 
 **Architecture and Training:**
 
@@ -68,7 +68,7 @@ Despite these issues, the experiment revealed potential for significant improvem
 
 Since the model was not able to remember recent incidents at the time of decision making, it created a requirement of adding recurrent layers to enhance situational recall and address behavioral issues.
 
-3. **Experiment 2: RNN Integration and Transition to LIDAR**
+## **Experiment 2: RNN Integration and Transition to LIDAR**
 
 **Architectural Changes and Setup:**
 
@@ -86,7 +86,10 @@ This experiment highlighted the effectiveness of RNNs in managing temporal dynam
 <video controls src="results/slow-no-collisions.mp4" title="speed being prioritized over collisions"></video>
 <video controls src="results/slow-no-collisions.mp4" title="No collisions being prioritized over speed"></video>
 
-4. **Experiment 3: LIDAR with Track Progress Environment**
+# testing video
+![RNN with LIDAR training setup](results/rnn-lidar.mp4)
+
+## **Experiment 3: LIDAR with Track Progress Environment**
 
 **Architectural Setup and Environmental Changes**:
 
@@ -102,7 +105,7 @@ This experiment highlighted the benefits of adding contextual and predictive dat
 
 <video controls src="results/rnn-standard-clip.mp4" title="results of training RNN with Track Progress"></video>
 
-5. **Results and Discussion Summary**
+## **Results and Discussion Summary**
 
 **Experiment 1 (EffNet in Full Environment):** Demonstrated efficientnet_v2's potential with complex visuals but was limited by slow training and the model's tendency to hug track edges due to its lack of temporal awareness.
 
@@ -110,7 +113,7 @@ This experiment highlighted the benefits of adding contextual and predictive dat
 
 **Experiment 3 (LIDAR with Track Progress):** Achieved the best results, with a lap time of 35 seconds. Incorporating track progress data enabled the model to anticipate the track layout, significantly boosting performance early in training.
 
-6. **Conclusion**
+## **Conclusion**
 
 Each experiment provided valuable insights into AI-driven racing strategies, culminating in the successful use of track progress data with an RNN to achieve a lap time of 30 seconds. Furthermore, RNN greatly reduced the training time. RNN with LIDAR track progress trained in 1/3rd the time of RNN with just LIDAR. This approach demonstrated the potential of incorporating contextual awareness into AI systems, significantly enhancing decision-making capabilities..The outcomes indicate promising strategies for refining autonomous systems, particularly through the development of predictive navigation capabilities essential in autonomous vehicles. Further research could explore more sophisticated neural network architectures, such as Transformers, to capture spatial-temporal dynamics more effectively. Hybrid models combining CNNs and RNNs might also improve performance. The training process would also benefit from a full-scale hyperparameter search and extensive training to explore AI’s capabilities in high-speed racing environments more deeply.
 
