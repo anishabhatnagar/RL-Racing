@@ -88,6 +88,7 @@ This experiment highlighted the effectiveness of RNNs in managing temporal dynam
 
 # testing video
 ![RNN with LIDAR training setup](results/rnn-lidar.mp4)
+![](results/rnn-standard-clip.mp4)
 
 ## **Experiment 3: LIDAR with Track Progress Environment**
 
@@ -104,6 +105,8 @@ Continuing from previous successes, Experiment 3 used the same RNN architecture 
 This experiment highlighted the benefits of adding contextual and predictive data to AI training in racing games. By simulating foresight with track progress data, the model adopted a strategic and anticipatory driving style similar to experienced human players. These results indicate that such enhancements can significantly improve training efficiency and effectiveness, setting the stage for advanced AI capabilities in simulated environments.
 
 <video controls src="results/rnn-standard-clip.mp4" title="results of training RNN with Track Progress"></video>
+
+
 
 ## **Results and Discussion Summary**
 
