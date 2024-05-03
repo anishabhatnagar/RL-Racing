@@ -89,6 +89,7 @@ This experiment highlighted the effectiveness of RNNs in managing temporal dynam
 # testing video
 ![RNN with LIDAR training setup](results/rnn-lidar.mp4)
 ![](results/rnn-standard-clip.mp4)
+![](results/rnn-standard-clip-15-sec.gif)
 
 ## **Experiment 3: LIDAR with Track Progress Environment**
 
