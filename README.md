@@ -2,6 +2,10 @@
 
 By [Anisha Bhatnagar](https://github.com/anishabhatnagar) and [Ashwin Udaykumar](https://github.com/ashwin2k)
 
+All of the code for this project is available at [https://github.com/ashwin2k/tmrl-rnn](https://github.com/ashwin2k/tmrl-rnn)
+
+The presentation for this project is available at [https://docs.google.com/presentation/d/1o_5flckV6MKzOfUubradi3Pf11HMKu0q5wjviKZX-I8/edit?usp=sharing](https://docs.google.com/presentation/d/1o_5flckV6MKzOfUubradi3Pf11HMKu0q5wjviKZX-I8/edit?usp=sharing)
+
 ## **Introduction**
 ### 1. **Overview of Trackmania**
 
@@ -107,7 +111,7 @@ The model showed gradual learning improvements, indicated by reducing actor and 
 
 Despite these issues, the experiment revealed potential for significant improvements with extended training. This model is currently still in training. Right now, the model is only able to move forward by hugging the walls.
 
-![Effnet model](results/effnet.gif)
+![Effnet model](results/effnet-clip.gif)
 
 ## **Results and Discussion Summary**
 
@@ -121,4 +125,3 @@ Despite these issues, the experiment revealed potential for significant improvem
 
 Each experiment provided valuable insights into AI-driven racing strategies, culminating in the successful use of track progress data with an RNN to achieve a lap time of 30 seconds. Furthermore, RNN greatly reduced the training time. RNN with LIDAR track progress trained in 1/3rd the time of RNN with just LIDAR. This approach demonstrated the potential of incorporating contextual awareness into AI systems, significantly enhancing decision-making capabilities..The outcomes indicate promising strategies for refining autonomous systems, particularly through the development of predictive navigation capabilities essential in autonomous vehicles. Further research could explore more sophisticated neural network architectures, such as Transformers, to capture spatial-temporal dynamics more effectively. Hybrid models combining CNNs and RNNs might also improve performance. The training process would also benefit from a full-scale hyperparameter search and extensive training to explore AI’s capabilities in high-speed racing environments more deeply.
 
-All of the code for this project is available at [https://github.com/ashwin2k/tmrl-rnn](https://github.com/ashwin2k/tmrl-rnn)
