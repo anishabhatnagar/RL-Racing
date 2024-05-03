@@ -1,6 +1,6 @@
 # Autonomous Racing with Reinforcement Learning
 
-By Anisha Bhatnagar and Ashwin Udaykumar
+By [Anisha Bhatnagar](https://github.com/anishabhatnagar) and [Ashwin Udaykumar](https://github.com/ashwin2k)
 
 ## **Introduction**
 ### 1. **Overview of Trackmania**
