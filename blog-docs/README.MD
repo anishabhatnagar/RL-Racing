@@ -64,7 +64,9 @@ The model showed gradual learning improvements, indicated by reducing actor and 
 - **Behavioral Tendencies**: The vehicle frequently hugged the track edges, suggesting limited situational awareness, possibly due to the convolutional network's lack of memory for recent incidents and spatial awareness.
 - **Training Speed**: Progress was slow, constrained by the high computational demands of EfficientNet_v2 and the operational requirement for the rollout worker to continuously run in the foreground, interacting directly with the game's active user interface.
 
-Despite these issues, the experiment revealed potential for significant improvements with extended training. This model is currently still in training.
+Despite these issues, the experiment revealed potential for significant improvements with extended training. This model is currently still in training. Right now, the model is only able to move forward by hugging the walls.
+
+![Effnet model](results/effnet.gif)
 
 Since the model was not able to remember recent incidents at the time of decision making, it created a requirement of adding recurrent layers to enhance situational recall and address behavioral issues.
 
