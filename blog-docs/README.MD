@@ -82,14 +82,9 @@ To overcome the memory limitations observed in Experiment 1, we replaced Efficie
 
 This experiment highlighted the effectiveness of RNNs in managing temporal dynamics within racing games. By integrating RNNs with LIDAR inputs, we streamlined the training process and significantly enhanced performance, indicating a robust approach for tasks that require both memory and real-time processing capabilities. The integration led to a notable reduction in crashes. Additionally, unlike the EffNet_v2 model, this setup allowed the agent to effectively navigate and recover from the crashes and successfully complete the lap. However, despite the good results, the model struggled with understanding the tradeoff between collisions and speed. In certain scenarios, the model would speed up but suffer from higher collisions. At the same time, in another scenario, the model had zero collisions but was extremely slow. Another problem with this setup was that the model was not able to predict ahead of time which direction it would need to turn. In these cases it would collide with the track edge before correcting its trajectory.
 
-<video controls src="results/rnn-lidar.mp4" title="RNN with LIDAR training setup"></video>
-<video controls src="results/slow-no-collisions.mp4" title="speed being prioritized over collisions"></video>
-<video controls src="results/slow-no-collisions.mp4" title="No collisions being prioritized over speed"></video>
-
-# testing video
-![RNN with LIDAR training setup](results/rnn-lidar.mp4)
-![](results/rnn-standard-clip.mp4)
-![](results/rnn-standard-clip-15-sec.gif)
+![RNN with LIDAR training setup](results/rnn-lidar.gif)
+![No collisions being prioritized over speed](results/slow-no-collisions.gif)
+![speed being prioritized over collisions](results/repeated-collisions_new.gif)
 
 ## **Experiment 3: LIDAR with Track Progress Environment**
 
@@ -105,8 +100,7 @@ Continuing from previous successes, Experiment 3 used the same RNN architecture 
 
 This experiment highlighted the benefits of adding contextual and predictive data to AI training in racing games. By simulating foresight with track progress data, the model adopted a strategic and anticipatory driving style similar to experienced human players. These results indicate that such enhancements can significantly improve training efficiency and effectiveness, setting the stage for advanced AI capabilities in simulated environments.
 
-<video controls src="results/rnn-standard-clip.mp4" title="results of training RNN with Track Progress"></video>
-
+![results of training RNN with Track Progress](results/rnn-standard-clip-15-sec.gif)
 
 
 ## **Results and Discussion Summary**
