@@ -1,6 +1,6 @@
 # Autonomous Racing with Reinforcement Learning
 
-By [Anisha Bhatnagar](https://github.com/anishabhatnagar) and [Ashwin Udaykumar](https://github.com/ashwin2k)
+By [Anisha Bhatnagar](https://github.com/anishabhatnagar) and [Ashwin Kumar Udayakumar](https://github.com/ashwin2k)
 
 All of the code for this project is available at [https://github.com/ashwin2k/tmrl-rnn](https://github.com/ashwin2k/tmrl-rnn)
 
