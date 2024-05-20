@@ -48,6 +48,10 @@ Inspired by behaviorism, the environment provides rewards based on performance m
 - **Performance**: Gradual improvements but slow training, tendency to hug track edges.
 
 
+## Conclusion
+Each experiment provided valuable insights into AI-driven racing strategies, demonstrating the potential of incorporating contextual awareness into AI systems. The integration of RNNs with LIDAR track progress data achieved significant performance improvements, suggesting promising strategies for refining autonomous systems in high-speed racing environments.
+
+
 # Installation
 1) Clone the project
 2) Navigate into the folder and do `pip install -e tmrl-drive`
